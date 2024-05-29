@@ -1,0 +1,72 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.signalfx.public</groupId>
+  <artifactId>signalfx-signalflow-parent</artifactId>
+  <name>SignalFx SignalFlow parent</name>
+  <!-- this root project is not published, this version is unused -->
+  <version>1.0.0-alpha</version>
+  <packaging>pom</packaging>
+
+  <description>
+    SignalFx SignalFlow root module
+  </description>
+
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.install.skip>true</maven.install.skip>
+  </properties>
+
+  <url>http://www.signalfx.com</url>
+
+  <developers>
+    <developer>
+      <id>splunk</id>
+      <name>Splunk Instrumentation Authors</name>
+      <email>support+java@signalfx.com</email>
+      <organization>Splunk</organization>
+      <organizationUrl>https://www.splunk.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <profiles>
+    <profile>
+      <id>release-sign-artifacts</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.13</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <modules>
+    <module>signalflow-client</module>
+  </modules>
+</project>
