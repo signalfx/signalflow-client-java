@@ -23,7 +23,7 @@ def no_snapshots(v):
     return 'SNAPSHOT' not in v
 
 FILE_REPLACES = {
-    'signalfx-signalflow/src/main/java/com/signalfx/signalflow/connection/AbstractHttpReceiverConnection.java': [
+    'signalflow-client/src/main/java/com/signalfx/signalflow/client/connection/AbstractHttpReceiverConnection.java': [
         (match_all, re.compile(r'public static final String VERSION_NUMBER = "(.*?)"'),
          'public static final String VERSION_NUMBER = "%s"')
     ],
@@ -46,7 +46,7 @@ def execute(cmd, expected_code=None, stdin=None, background=False):
 def update_pom_files(version):
     base_dir = os.getcwd()
     logger.info('Updating POM files to version %s...', version)
-    cmd = ['./mvnw', 'versions:set', '-am', '-pl', 'signalfx-signalflow',
+    cmd = ['./mvnw', 'versions:set', '-am', '-pl', 'signalflow-client',
            '-DnewVersion=%s' % version]
     (stdout, _, code) = execute(cmd, expected_code=0)
     os.chdir(base_dir)

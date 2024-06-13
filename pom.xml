@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.signalfx.public</groupId>
-  <artifactId>signalfx-signalflow-parent</artifactId>
+  <artifactId>signalflow-client-parent</artifactId>
   <name>SignalFx SignalFlow parent</name>
   <!-- this root project is not published, this version is unused -->
   <version>1.0.0-alpha</version>
