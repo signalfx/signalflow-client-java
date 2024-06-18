@@ -1,0 +1,51 @@
+include:
+  - project: 'prodsec/scp-scanning/gitlab-checkmarx'
+    ref: latest
+    file: '/templates/.sast_scan.yml'
+  - project: 'ci-cd/templates'
+    ref: master
+    file: '/prodsec/.oss-scan.yml'
+
+image:
+  name: "docker-hub.repo.splunkdev.net/openjdk:11.0.11-9-jdk"
+
+stages:
+  - build
+  - verify
+  - release
+
+build:
+  stage: build
+  script:
+    - ./mvnw clean package -DskipTests=true
+    - ./mvnw verify
+
+sast-scan:
+  stage: verify
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+  extends: .sast_scan
+  variables:
+    SAST_SCANNER: "Semgrep"
+    # Fail build on high severity security vulnerabilities
+    alert_mode: "policy"
+
+oss-scan:
+  stage: verify
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+  extends: .oss-scan
+
+snapshot:
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+  script:
+    - ./deploy.sh snapshot
+
+release:
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+.*/'
+  script:
+    - ./deploy.sh release

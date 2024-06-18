@@ -1,0 +1,14 @@
+* @signalfx/gdi-java-maintainers @signalfx/gdi-java-approvers
+
+CODEOWNERS @signalfx/gdi-java-maintainers
+
+#####################################################
+#
+# Docs reviewers
+#
+#####################################################
+
+*.md @signalfx/gdi-docs @signalfx/gdi-java-maintainers @signalfx/gdi-java-approvers
+*.rst @signalfx/gdi-docs @signalfx/gdi-java-maintainers @signalfx/gdi-java-approvers
+docs/ @signalfx/gdi-docs @signalfx/gdi-java-maintainers @signalfx/gdi-java-approvers
+README* @signalfx/gdi-docs @signalfx/gdi-java-maintainers @signalfx/gdi-java-approvers
