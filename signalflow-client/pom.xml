@@ -13,7 +13,7 @@
   <groupId>com.signalfx.public</groupId>
   <artifactId>signalflow-client</artifactId>
   <name>SignalFlow Client</name>
-  <version>1.0.0-beta1</version>
+  <version>1.0.0-beta2</version>
   <description>
     SignalFx functionality to support signalflow
   </description>
@@ -100,6 +100,18 @@
     </dependency>
   </dependencies>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <name>Nexus Release Repository</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
 
   <build>
     <pluginManagement>
