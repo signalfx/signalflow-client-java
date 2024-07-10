@@ -13,7 +13,7 @@
   <groupId>com.signalfx.public</groupId>
   <artifactId>signalflow-client</artifactId>
   <name>SignalFlow Client</name>
-  <version>1.0.0-beta3</version>
+  <version>1.0.0</version>
   <description>
     SignalFx functionality to support signalflow
   </description>
