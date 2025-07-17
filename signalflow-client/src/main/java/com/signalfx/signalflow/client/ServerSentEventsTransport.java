@@ -381,6 +381,8 @@ public class ServerSentEventsTransport implements SignalFlowTransport {
         public void close() {
             super.close();
 
+            this.streamParser.close();
+
             try {
                 this.response.close();
             } catch (IOException ex) {
@@ -392,8 +394,6 @@ public class ServerSentEventsTransport implements SignalFlowTransport {
             } catch (IOException ex) {
                 log.error("failed to close connection", ex);
             }
-
-            this.streamParser.close();
         }
     }
 
