@@ -54,7 +54,7 @@ cat > release-settings.xml <<EOF
 <settings>
   <servers>
     <server>
-      <id>ossrh</id>
+      <id>central</id>
       <username>${SONATYPE_USERNAME}</username>
       <password>${SONATYPE_PASSWORD}</password>
     </server>
