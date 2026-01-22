@@ -24,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPInputStream;
 
+import net.jpountz.lz4.LZ4FrameInputStream;
+import com.github.luben.zstd.ZstdInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -63,19 +65,22 @@ public class WebSocketTransport implements SignalFlowTransport {
     protected final String path;
     protected final int timeout;
     protected final boolean compress;
+    protected final CompressionType compressionType;
     protected WebSocketClient webSocketClient;
     protected TransportConnection transportConnection;
 
     protected WebSocketTransport(String token, SignalFxEndpoint endpoint, int apiVersion,
-                                 int timeout, boolean compress, int maxBinaryMessageSize) {
+                                 int timeout, boolean compress, CompressionType compressionType,
+                                 int maxBinaryMessageSize) {
         this.token = token;
         this.endpoint = endpoint;
         this.path = "/v" + apiVersion + "/signalflow/connect";
         this.timeout = timeout;
         this.compress = compress;
+        this.compressionType = compressionType;
 
         try {
-            this.transportConnection = new TransportConnection(token);
+            this.transportConnection = new TransportConnection(token, compressionType);
             URI uri = new URIBuilder(String.format("%s://%s:%s%s", endpoint.getScheme(),
                     endpoint.getHostname(), endpoint.getPort(), path)).build();
 
@@ -111,6 +116,9 @@ public class WebSocketTransport implements SignalFlowTransport {
         request.put("type", "attach");
         request.put("handle", handle);
         request.put("compress", Boolean.toString(compress));
+        if (compress && compressionType != null) {
+            request.put("compressionType", compressionType.getValue());
+        }
 
         transportConnection.sendMessage(channel, request);
 
@@ -126,6 +134,9 @@ public class WebSocketTransport implements SignalFlowTransport {
         request.put("type", "execute");
         request.put("program", program);
         request.put("compress", Boolean.toString(compress));
+        if (compress && compressionType != null) {
+            request.put("compressionType", compressionType.getValue());
+        }
 
         transportConnection.sendMessage(channel, request);
 
@@ -204,6 +215,7 @@ public class WebSocketTransport implements SignalFlowTransport {
         private int timeout = DEFAULT_TIMEOUT;
         private int version = 2;
         private boolean compress = true;
+        private CompressionType compressionType = CompressionType.GZIP;
         private int maxBinaryMessageSize = -1;
 
         public TransportBuilder(String token) {
@@ -240,6 +252,11 @@ public class WebSocketTransport implements SignalFlowTransport {
             return this;
         }
 
+        public TransportBuilder setCompressionType(CompressionType compressionType) {
+            this.compressionType = compressionType;
+            return this;
+        }
+
         public TransportBuilder setMaxBinaryMessageSize(int size) {
             this.maxBinaryMessageSize = size;
             return this;
@@ -248,7 +265,8 @@ public class WebSocketTransport implements SignalFlowTransport {
         public WebSocketTransport build() {
             SignalFxEndpoint endpoint = new SignalFxEndpoint(this.protocol, this.host, this.port);
             WebSocketTransport transport = new WebSocketTransport(this.token, endpoint,
-                    this.version, this.timeout, this.compress, this.maxBinaryMessageSize);
+                    this.version, this.timeout, this.compress, this.compressionType,
+                    this.maxBinaryMessageSize);
             return transport;
         }
     }
@@ -300,9 +318,11 @@ public class WebSocketTransport implements SignalFlowTransport {
         private final Map<String, TransportChannel> channels = Collections
                 .synchronizedMap(new HashMap<String, TransportChannel>());
         private SignalFlowException error;
+        private final CompressionType compressionType;
 
-        protected TransportConnection(String token) {
+        protected TransportConnection(String token, CompressionType compressionType) {
             this.token = token;
+            this.compressionType = compressionType;
         }
 
         @Override
@@ -378,22 +398,17 @@ public class WebSocketTransport implements SignalFlowTransport {
 
             boolean compressed = (flags & (1 << 0)) != 0;
             if (compressed) {
-                ByteArrayInputStream bais = new ByteArrayInputStream(body);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                int compressionTypeOrdinal = (flags >> 2) & 0x07;
+                CompressionType actualCompressionType;
                 try {
-                    GZIPInputStream gzip = new GZIPInputStream(bais);
-                    try {
-                        IOUtils.copy(gzip, baos);
-                    } finally {
-                        IOUtils.closeQuietly(gzip);
-                    }
-                    body = baos.toByteArray();
-                } catch (IOException ioe) {
-                    log.error("failed to process message", ioe);
+                    actualCompressionType = CompressionType.values()[compressionTypeOrdinal];
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    log.error("ignoring message with unsupported compression type ordinal {}", compressionTypeOrdinal);
                     return;
-                } finally {
-                    IOUtils.closeQuietly(baos);
-                    IOUtils.closeQuietly(bais);
+                }
+                body = decompressBody(body, actualCompressionType);
+                if (body == null) {
+                    return;
                 }
             }
 
@@ -426,6 +441,49 @@ public class WebSocketTransport implements SignalFlowTransport {
                 } else {
                     log.debug("ignoring message. channel not found {}", channelName);
                 }
+            }
+        }
+
+        private byte[] decompressBody(byte[] body, CompressionType actualCompressionType) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(body);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try {
+                switch (actualCompressionType) {
+                case GZIP:
+                    GZIPInputStream gzip = new GZIPInputStream(bais);
+                    try {
+                        IOUtils.copy(gzip, baos);
+                    } finally {
+                        IOUtils.closeQuietly(gzip);
+                    }
+                    break;
+                case LZ4:
+                    LZ4FrameInputStream lz4 = new LZ4FrameInputStream(bais);
+                    try {
+                        IOUtils.copy(lz4, baos);
+                    } finally {
+                        IOUtils.closeQuietly(lz4);
+                    }
+                    break;
+                case ZSTD:
+                    ZstdInputStream zstd = new ZstdInputStream(bais);
+                    try {
+                        IOUtils.copy(zstd, baos);
+                    } finally {
+                        IOUtils.closeQuietly(zstd);
+                    }
+                    break;
+                default:
+                    log.error("unsupported compression type: {}", actualCompressionType);
+                    return null;
+                }
+                return baos.toByteArray();
+            } catch (IOException ioe) {
+                log.error("failed to decompress message", ioe);
+                return null;
+            } finally {
+                IOUtils.closeQuietly(baos);
+                IOUtils.closeQuietly(bais);
             }
         }
 

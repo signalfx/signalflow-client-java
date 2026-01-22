@@ -90,6 +90,16 @@
       <artifactId>websocket-client</artifactId>
       <version>9.4.58.v20250814</version>
     </dependency>
+    <dependency>
+      <groupId>at.yawk.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <version>1.10.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <version>1.5.7-6</version>
+    </dependency>
 
     <!-- test -->
     <dependency>
@@ -274,6 +284,14 @@
             <relocation>
               <pattern>com.google.protobuf</pattern>
               <shadedPattern>com.signalfx.shaded.google.protobuf</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>at.yawk</pattern>
+              <shadedPattern>com.signalfx.shaded.yawk</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>com.github.luben</pattern>
+              <shadedPattern>com.signalfx.shaded.luben</shadedPattern>
             </relocation>
           </relocations>
         </configuration>
