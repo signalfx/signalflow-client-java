@@ -6,6 +6,7 @@ package com.signalfx.signalflow.client;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -399,13 +400,12 @@ public class WebSocketTransport implements SignalFlowTransport {
             boolean compressed = (flags & (1 << 0)) != 0;
             if (compressed) {
                 int compressionTypeOrdinal = (flags >> 2) & 0x07;
-                CompressionType actualCompressionType;
-                try {
-                    actualCompressionType = CompressionType.values()[compressionTypeOrdinal];
-                } catch (ArrayIndexOutOfBoundsException e) {
+                CompressionType[] compressionTypes = CompressionType.values();
+                if (compressionTypes.length <= compressionTypeOrdinal) {
                     log.error("ignoring message with unsupported compression type ordinal {}", compressionTypeOrdinal);
                     return;
                 }
+                CompressionType actualCompressionType = compressionTypes[compressionTypeOrdinal];
                 body = decompressBody(body, actualCompressionType);
                 if (body == null) {
                     return;
@@ -444,38 +444,32 @@ public class WebSocketTransport implements SignalFlowTransport {
             }
         }
 
+        private InputStream createStream(ByteArrayInputStream bais, CompressionType compressionType) throws IOException {
+            switch (compressionType) {
+            case GZIP:
+                return new GZIPInputStream(bais);
+            case LZ4:
+                return new LZ4FrameInputStream(bais);
+            case ZSTD:
+                return new ZstdInputStream(bais);
+            default:
+                log.error("unsupported compression type: {}", compressionType);
+                return null;
+            }
+        }
+
         private byte[] decompressBody(byte[] body, CompressionType actualCompressionType) {
             ByteArrayInputStream bais = new ByteArrayInputStream(body);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             try {
-                switch (actualCompressionType) {
-                case GZIP:
-                    GZIPInputStream gzip = new GZIPInputStream(bais);
-                    try {
-                        IOUtils.copy(gzip, baos);
-                    } finally {
-                        IOUtils.closeQuietly(gzip);
-                    }
-                    break;
-                case LZ4:
-                    LZ4FrameInputStream lz4 = new LZ4FrameInputStream(bais);
-                    try {
-                        IOUtils.copy(lz4, baos);
-                    } finally {
-                        IOUtils.closeQuietly(lz4);
-                    }
-                    break;
-                case ZSTD:
-                    ZstdInputStream zstd = new ZstdInputStream(bais);
-                    try {
-                        IOUtils.copy(zstd, baos);
-                    } finally {
-                        IOUtils.closeQuietly(zstd);
-                    }
-                    break;
-                default:
-                    log.error("unsupported compression type: {}", actualCompressionType);
+                InputStream stream = createStream(bais, actualCompressionType);
+                if (stream == null) {
                     return null;
+                }
+                try {
+                    IOUtils.copy(stream, baos);
+                } finally {
+                    IOUtils.closeQuietly(stream);
                 }
                 return baos.toByteArray();
             } catch (IOException ioe) {
