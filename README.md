@@ -2,7 +2,7 @@
 
 * :warning: This library has reached end of support.
 
-This library is now in permanent public archive and will no longer receive updates..
+This library is now in permanent public archive and will no longer receive updates.
 
 ---
 
