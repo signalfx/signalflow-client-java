@@ -1,8 +1,13 @@
- # SignalFlow Java Client
+# SignalFlow Java Client
+
+* :warning: This library has reached end of support.
+
+This library is now in permanent public archive and will no longer receive updates..
+
+---
 
 This is a client for [SignalFlow](https://dev.splunk.com/observability/docs/signalflow),
 which enables you to stream and analyze your organization's metric data in real time.
-
 
 ## Run SignalFlow computations
 
